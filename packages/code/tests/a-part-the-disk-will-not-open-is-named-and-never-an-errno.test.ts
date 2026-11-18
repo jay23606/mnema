@@ -46,14 +46,14 @@ const AN_ERRNO = new RegExp(
   `(^|[^A-Za-z0-9_])(${Object.keys(constants.errno).join('|')})([^A-Za-z0-9_]|$)`,
 );
 
-type Sandbox = { repo: string; home: string; made: string };
+type Sandbox = { repo: string; home: string };
 type Tree = 'public' | 'private' | 'global';
 
-const sandboxes: Sandbox[] = [];
+const madeHere: string[] = [];
 afterEach(() => {
-  for (const one of sandboxes.splice(0)) {
-    restoreModes(one.made);
-    rmSync(one.made, { recursive: true, force: true });
+  for (const made of madeHere.splice(0)) {
+    restoreModes(made);
+    rmSync(made, { recursive: true, force: true });
   }
 });
 
@@ -93,8 +93,8 @@ const mnema = (box: Sandbox, args: string[]) =>
 
 function aRecord(): Sandbox {
   const made = mkdtempSync(join(tmpdir(), 'mnema-disk-refuses-'));
-  const box = { made, repo: join(made, 'repo'), home: join(made, 'home') };
-  sandboxes.push(box);
+  const box = { repo: join(made, 'repo'), home: join(made, 'home') };
+  madeHere.push(made);
   for (const path of [box.repo, box.home]) mkdirSync(path, { recursive: true });
   expect(mnema(box, ['init', '--yes', '--hosts', 'none']).status).toBe(0);
   for (const tree of ['public', 'private', 'global']) {

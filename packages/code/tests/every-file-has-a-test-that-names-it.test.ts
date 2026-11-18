@@ -1069,6 +1069,7 @@ const CLAUSES_PER_FILE: Readonly<Record<string, number>> = {
   'packages/code/tests/a-note-can-be-retracted.test.ts': 11,
   'packages/code/tests/a-note-recorded-twice-is-the-one-on-the-record.test.ts': 12,
   'packages/code/tests/a-palette-for-the-words.test.ts': 26,
+  'packages/code/tests/a-part-the-disk-will-not-open-is-named-and-never-an-errno.test.ts': 7,
   'packages/code/tests/a-part-this-mnema-does-not-read-has-its-words.test.ts': 4,
   'packages/code/tests/a-passphrase-in-the-environment-opens-the-persons-key.test.ts': 12,
   'packages/code/tests/a-picture-of-the-record.test.ts': 8,
