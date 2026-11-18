@@ -186,7 +186,7 @@ const SWEPT = [
 describe.skipIf(CANNOT_CHMOD)('a part the disk will not open, in every tree', () => {
   describe.each(['public', 'private', 'global'] as const)('in the %s tree', (tree) => {
     // The private and the global tree are asked for the two damages that reach a read of `tails/` itself.
-    it.each(tree === 'public' ? DAMAGES : [DAMAGES[0], DAMAGES[3]])(
+    it.each(tree === 'public' ? DAMAGES : DAMAGES.filter((_, at) => at === 0 || at === 3))(
       '%s: no command prints the system’s own error',
       (_name, damage) => {
         const box = aRecord();
