@@ -41,7 +41,9 @@ import {
   locatedFromEnd,
   parsedFromEnd,
   parseStoredLine,
+  readingWhatTheDiskLets,
   splitLines,
+  UnreadableDiskError,
   UnreadableLineError,
 } from './lines.js';
 
@@ -125,7 +127,12 @@ export function listedWithoutLinks(
     entries = listedEntries(join(layout.root, ...place.split('/')));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
-    throw error;
+    if (!(error instanceof UnreadableDiskError)) throw error;
+    // The folder is named by its place in the record, where the listing knew only the disk.
+    const named = new UnreadableDiskError(error.locus, error.reason, place);
+    if (refused === undefined) throw named;
+    refused(named);
+    return [];
   }
   const links = entries.filter((entry) => entry.link);
   if (links.length === 0) return entries;
@@ -161,6 +168,21 @@ export function listTailsLeavingLinks(layout: ChainLayout): string[] {
   return listedEntries(dir)
     .filter((e) => e.directory)
     .map((e) => e.name);
+}
+
+/**
+ * The tails a reader that only chooses where to keep a cache looks at: as {@link listTailsLeavingLinks}
+ * has them, and none when the disk does not let `tails/` be listed. Choosing a place refuses nothing: the
+ * reading that serves the record names the part ({@link UnreadableDiskError}), and a tree that cannot
+ * be listed is kept in memory until it can.
+ */
+export function listTailsToChooseACacheBy(layout: ChainLayout): string[] {
+  try {
+    return listTailsLeavingLinks(layout);
+  } catch (error) {
+    if (error instanceof UnreadableDiskError) return [];
+    throw error;
+  }
 }
 
 /** What a directory listing says one entry is, nothing at it opened or followed. */
@@ -201,7 +223,7 @@ export function listedEntries(
   dir: string,
   check: LinkCheck | undefined = CONFIRMED_ON_THIS_SYSTEM,
 ): ListedEntry[] {
-  return readdirSync(dir, { withFileTypes: true })
+  return readingWhatTheDiskLets(dir, undefined, () => readdirSync(dir, { withFileTypes: true }))
     .map((entry): ListedEntry => {
       const said = {
         name: entry.name,
@@ -614,7 +636,7 @@ function entriesOfSegment(
   const relaidEntryOf = relaying(entryOf, relaid, file);
   // Read as BYTES: each line is decoded by {@link parseStoredLine}, which refuses one
   // that is not UTF-8 instead of reading U+FFFD in its place.
-  const raw = readFileSync(file);
+  const raw = readingWhatTheDiskLets(file, undefined, () => readFileSync(file));
   const endsWithNewline = raw.at(-1) === NEWLINE;
   const lines = splitLines(raw);
   const entries: ChainEntry[] = [];
@@ -714,7 +736,7 @@ export interface RetainedEntry {
  */
 export interface RefusedPart {
   /** A line that would not parse, or a symbolic link. */
-  readonly kind: 'line' | 'link';
+  readonly kind: 'line' | 'link' | 'disk';
   /** The tail directory the part is in, or `''` for a link above every tail (`tails`). */
   readonly tail: string;
   /** The part's place in the record, `/`-separated: the segment of the line, or the link itself. */
@@ -743,6 +765,16 @@ export function refusedPartOf(
       kind: 'link',
       tail: top === 'tails' && tail !== undefined ? tail : '',
       place: error.path,
+      reason: error.reason,
+    };
+  }
+  if (error instanceof UnreadableDiskError) {
+    const held = /[\\/]tails[\\/]([^\\/]+)/.exec(error.locus);
+    const place = error.path ?? /(?:^|[\\/])(tails(?:[\\/][^\\/]+){0,2})$/.exec(error.locus)?.[1];
+    return {
+      kind: 'disk',
+      tail: held?.[1] ?? '',
+      place: (place ?? error.locus).replaceAll('\\', '/'),
       reason: error.reason,
     };
   }
@@ -1025,7 +1057,10 @@ function sizeOf(file: string): number {
 
 /** The line (counted from 1) that starts at byte `start` of `file`. */
 function lineAtOffset(file: string, start: number): number {
-  const before = readFileSync(file).subarray(0, start);
+  const before = readingWhatTheDiskLets(file, undefined, () => readFileSync(file)).subarray(
+    0,
+    start,
+  );
   let line = 1;
   for (const byte of before) if (byte === NEWLINE) line += 1;
   return line;
@@ -1177,7 +1212,7 @@ export function readTailCheckpoints(
   if (!existsSync(file)) return [];
   const relaidCheckpointOf = relaying(parseCheckpoint, relaid, file);
   // As bytes, for the reason {@link entriesOfSegment} reads a segment so.
-  const raw = readFileSync(file);
+  const raw = readingWhatTheDiskLets(file, undefined, () => readFileSync(file));
   const endsWithNewline = raw.at(-1) === NEWLINE;
   const lines = splitLines(raw);
   const checkpoints: Checkpoint[] = [];
