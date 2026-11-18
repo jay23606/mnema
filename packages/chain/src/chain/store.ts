@@ -129,7 +129,7 @@ export function listedWithoutLinks(
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     if (!(error instanceof UnreadableDiskError)) throw error;
     // The folder is named by its place in the record, where the listing knew only the disk.
-    const named = new UnreadableDiskError(error.locus, error.reason, place);
+    const named = new UnreadableDiskError(error.locus, error.reason, place, error.code);
     if (refused === undefined) throw named;
     refused(named);
     return [];

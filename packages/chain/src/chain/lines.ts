@@ -171,10 +171,13 @@ export class UnreadableDiskError extends UnreadableLineError {
   override readonly name: string = 'UnreadableDiskError';
   /** The part's place in the record, `/`-separated, when the reader that met it knows it. */
   readonly path: string | undefined;
+  /** The code the system answered with, kept for the readers that only mark a fault (`freshness.ts`). */
+  readonly code: string;
 
-  constructor(locus: string, reason: string, path?: string) {
+  constructor(locus: string, reason: string, path: string | undefined, code: string) {
     super(locus, reason);
     this.path = path;
+    this.code = code;
     this.message = `${path ?? locus} cannot be opened: ${reason}`;
   }
 }
@@ -185,8 +188,9 @@ export function refusedByTheDisk(
   locus: string,
   path?: string,
 ): UnreadableDiskError | undefined {
-  const reason = DISK_WORDS[(error as NodeJS.ErrnoException | undefined)?.code ?? ''];
-  return reason === undefined ? undefined : new UnreadableDiskError(locus, reason, path);
+  const code = (error as NodeJS.ErrnoException | undefined)?.code ?? '';
+  const reason = DISK_WORDS[code];
+  return reason === undefined ? undefined : new UnreadableDiskError(locus, reason, path, code);
 }
 
 /** Runs `read`, which opens one part of the record, and turns what the disk refuses into {@link UnreadableDiskError}. */

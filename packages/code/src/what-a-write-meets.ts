@@ -484,6 +484,7 @@ export function unreadableErrorOf(fact: ScopedLinkBreak): UnreadableLineError {
       join(unread.root, ...unread.place.split('/')),
       unread.reason,
       unread.place,
+      'UNREADABLE',
     );
   }
   const file = join(unread.root, ...unread.place.split('/'));
