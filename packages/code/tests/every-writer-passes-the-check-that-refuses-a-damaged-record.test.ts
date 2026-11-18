@@ -116,7 +116,18 @@ let sandbox: string;
 let home: string;
 let bin: string;
 let repo: string;
-let ids: Record<string, string>;
+interface Ids {
+  task: string;
+  skill: string;
+  rule: string;
+  toMove: string;
+  old: string;
+  successor: string;
+  note: string;
+  observation: string;
+  run: string;
+}
+let ids: Ids;
 let foreign: string;
 let backupKey: string;
 let relinkable = 'no-such-tail';
@@ -240,6 +251,8 @@ beforeAll(() => {
     old: decide('Keep the old name'),
     successor: decide('Use the new name'),
     note: idIn(founded(['memory', 'a note somebody will take back'])),
+    observation: '',
+    run: '',
   };
   founded(['link', ids.rule, ids.task, '--rel', 'relates-to']);
   founded(['link', ids.rule, 'src', '--rel', 'governs']);
